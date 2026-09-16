@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { signToken, jsonError } from '@/lib/auth';
+import { checkLoginRate, recordLoginFailure, clearLoginFailures, rateLimited } from '@/lib/rate-limit';
 
 // First-run setup: creates the ONE owner of this personal vault. No password —
 // Telegram is the authentication (claim happens via /start or /login code).
@@ -17,16 +18,25 @@ export async function POST(request: Request) {
   return Response.json({ ok: true, botUsername: process.env.TELEGRAM_BOT_USERNAME || '' });
 }
 
+// Code login (issued by /login in the bot). Unauthenticated by design, so it is
+// rate limited per IP and globally — otherwise the code is brute-forceable.
 export async function PUT(request: Request) {
-  // Code login (issued by /login in the bot)
+  const verdict = checkLoginRate(request);
+  if (!verdict.allowed) return rateLimited(verdict.retryAfter);
+
   const body = await request.json().catch(() => null);
   const code = String(body?.code || '').trim().toUpperCase();
   if (!code) return jsonError('Code required');
 
   const link = await prisma.linkCode.findFirst({ where: { code, expires: { gt: new Date() } } });
-  if (!link) return jsonError('Invalid or expired code — send /login to the bot for a new one', 401);
+  if (!link) {
+    recordLoginFailure(request);
+    return jsonError('Invalid or expired code — send /login to the bot for a new one', 401);
+  }
 
   await prisma.linkCode.delete({ where: { id: link.id } });
+  clearLoginFailures(request);
+
   const user = await prisma.user.findUnique({ where: { id: link.userId } });
   if (!user) return jsonError('User gone', 404);
   return Response.json({ token: signToken(user.id), user: { id: user.id, displayName: user.displayName } });

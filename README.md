@@ -66,11 +66,18 @@ Webhook alternative: set `TELEGRAM_WEBHOOK_SECRET` and point Telegram to `https:
 
 ## Security
 
-- Passwords: bcrypt (cost 10). Sessions: JWT (HS256, 30d), secret from env.
+- Passwords: bcrypt (cost 10). Sessions: JWT (HS256, 30d), secret from env — the app refuses to boot without `JWT_SECRET` in production.
+- Code login (`/login` in the bot) is rate limited: 5 attempts per IP per 15 minutes plus a global cap, so the one-time code is not brute-forceable.
 - All data endpoints are user-scoped server-side (ownership checked per request).
 - Telegram Mini App login verifies the initData HMAC per official spec + 24h freshness window.
 - Webhook endpoint verifies `X-Telegram-Bot-Api-Secret-Token` when configured.
 - Data stays on your server. SQLite file lives in `data/` — back it up with anything.
+
+## Database path
+
+A relative SQLite path resolves against `prisma/`, not the project root. The
+default `.env.example` uses `file:../data/mindvault.db`, which lands in
+`<project>/data/mindvault.db`. Use an absolute path if you prefer.
 
 ## Design — "Midnight Calm"
 

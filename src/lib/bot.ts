@@ -1,6 +1,7 @@
 import { prisma } from './db';
 import { tg, sendMessage, userByTelegramId, miniAppUrl } from './telegram';
 import { normalizeMood, estimateMood, suggestTags, suggestCategory, MOODS, moodMeta } from './mood';
+import { generateLoginCode } from './login-code';
 
 const MORNING_TEXT = [
   '☀️ <b>Morning check-in</b>',
@@ -185,7 +186,7 @@ export async function handleUpdate(update: any): Promise<void> {
 
     // /login — issue a one-time web login code (passwordless)
     if (cmd === '/login') {
-      const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+      const code = generateLoginCode();
       await prisma.linkCode.deleteMany({ where: { userId: user.id } });
       await prisma.linkCode.create({ data: { code, userId: user.id, expires: new Date(Date.now() + 10 * 60 * 1000) } });
       await sendMessage(chatId, [
