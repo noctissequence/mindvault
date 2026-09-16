@@ -1,0 +1,28 @@
+# MindVault — Docker Compose deployment
+# Usage: cp .env.example .env && nano .env && docker compose up -d --build
+services:
+  web:
+    build: .
+    container_name: mindvault-web
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "127.0.0.1:8791:8791"
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8791/api/settings"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  worker:
+    build: .
+    container_name: mindvault-worker
+    restart: unless-stopped
+    env_file: .env
+    command: ["npx", "tsx", "scripts/worker.ts"]
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - web

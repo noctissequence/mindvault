@@ -1,0 +1,99 @@
+// MindVault data model
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id @default(cuid())
+  email            String   @unique
+  passwordHash     String
+  displayName      String
+  timezone         String   @default("Asia/Jakarta")
+  telegramId       String?  @unique
+  telegramUsername String?
+  morningReminder  Boolean  @default(true)
+  nightReminder    Boolean  @default(true)
+  morningTime      String   @default("08:00")
+  nightTime        String   @default("22:00")
+  entries          Entry[]
+  memories         Memory[]
+  moodLogs         MoodLog[]
+  reminders        Reminder[]
+  linkCodes        LinkCode[]
+  createdAt        DateTime @default(now())
+}
+
+model Entry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  mood      String?
+  moodScore Int?
+  category  String   @default("note")
+  tags      String   @default("")
+  source    String   @default("web")
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model Memory {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String   @default("")
+  type        String   @default("important")
+  status      String   @default("open")
+  createdAt   DateTime @default(now())
+
+  @@index([userId, type])
+}
+
+model MoodLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mood      String
+  score     Int      @default(3)
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model Reminder {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message     String
+  schedule    String
+  lastSentYMD String?
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([userId, enabled])
+}
+
+model LinkCode {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires   DateTime
+  createdAt DateTime @default(now())
+}
+
+model LoginToken {
+  id         String   @id @default(cuid())
+  token      String   @unique
+  telegramId String
+  expires    DateTime
+  createdAt  DateTime @default(now())
+}
