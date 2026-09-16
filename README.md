@@ -36,12 +36,16 @@ docker compose up -d --build
 ## Deploy (bare VPS)
 
 ```bash
+cp .env.example .env
+# edit .env: JWT_SECRET (required), APP_URL, TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USERNAME
 npm install
 npx prisma db push
 npm run build
 npm start            # web on :8791
 npx tsx scripts/worker.ts   # bot + reminders
 ```
+
+> `JWT_SECRET` is required in production — the app refuses to start (and the build fails) without it.
 
 Suggested keep-alive cron (`/etc/cron.d/mindvault`):
 
